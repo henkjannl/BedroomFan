@@ -1,3 +1,7 @@
+# Files that should not be in the public repository
+config.jsn
+secret*.*
+
 # Prerequisites
 *.d
 
