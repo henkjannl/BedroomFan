@@ -18,127 +18,52 @@ using namespace std;
 const char *CONFIG_FILE = "/config.jsn";
 
 // ======== TYPES ================
-
-
-class tData {
-  public:
-
-    // Connection to internet
-    bool connected;
-
-    // Timezone and time
-    bool syncTime;
-    string timezone;
-    int timeZoneOffset;
-    int timeDSToffset;
-    float lat, lon;
-
-    // Weather info
-    bool requestWeather;
-    tDataQuality weatherAvailable;
-    float outsideTemp;
-    list<tPrecipitation> precipitation;
-    char weatherIcon[12];
-    time_t sunrise;
-    time_t sunset;
-
-    // Quote
-    bool requestQuote;
-    tDataQuality quoteAvailable;
-    string quote;
-  
-    // System info
-    UBaseType_t lightHighWaterMark;   // Unused stack for the measurement thread
-    UBaseType_t screenHighWaterMark;  // Unused stack for the display thread
-    UBaseType_t weatherHighWaterMark; // Unused stack for the weather thread
-    UBaseType_t quoteHighWaterMark;   // Unused stack for the weather thread
-    
-    uint32_t lightAlive;
-    uint32_t screenAlive;
-    uint32_t keyboardAlive;
-    uint32_t weatherAlive;
-    uint32_t quoteAlive;
-
-    uint32_t screenRedrawMillis;
-    
-    tData() {
-      connected=false;
-      syncTime = false;
-      timezone="Europe/Amsterdam";
-      timeZoneOffset=3600;
-      timeDSToffset=0;
-      lat=52.25319;
-      lon=6.78546;
-
-      weatherAvailable=dqUnavailable;
-
-      quoteAvailable=dqUnavailable;
-      requestQuote=false;
-
-      lightAlive=0;
-      screenAlive=0;
-      keyboardAlive=0;
-      weatherAlive=0;
-    };
-
-}; // tData
-
 struct tAccessPoint {
-  string ssid;
-  string password;
-  string timezone;
-  float lat, lon;
+  String ssid;
+  String password;
 }; // tAccesspoint
 
 class tConfig {
   public:
     list<tAccessPoint> AccessPoints;  
 
-    string botName;
-    string botUserName;
-    string botToken;
+    String botName;
+    String botUserName;
+    String botToken;
   
     void load() {    
+      Serial.println("Loading config");
       StaticJsonDocument<1024> doc;
-      File input = SPIFFS.open(CONFIG_FILE);
-      DeserializationError error = deserializeJson(doc, input);
-            
+      File file = SPIFFS.open(CONFIG_FILE);
+      DeserializationError error = deserializeJson(doc, file);
+
       if (error) {
         Serial.print(F("deserializeJson() failed: "));
         Serial.println(error.f_str());
         return;
       }
       
+      Serial.println("Parsing JSON");
       for (JsonObject elem : doc["AccessPoints"].as<JsonArray>()) {
         tAccessPoint AccessPoint;
-        AccessPoint.ssid=elem["SSID"].as<string>();
-        AccessPoint.password=elem["password"].as<string>();
-        AccessPoint.timezone=elem["timezone"].as<string>();
-        AccessPoint.lat = elem["lat"]; // 52.25319, 56.25319
-        AccessPoint.lon = elem["lon"]; // 6.78546, 6.78546
-        AccessPoints.push_back(AccessPoint);    
+        AccessPoint.ssid=elem["SSID"].as<String>();
+        
+        Serial.println(elem["SSID"].as<String>());
+        Serial.println(AccessPoint.ssid);
+        
+        AccessPoint.password=elem["password"].as<String>();
+        
+        Serial.println(elem["password"].as<String>());
+        Serial.println(AccessPoint.password);
+        
+        AccessPoints.push_back(AccessPoint);
       }
 
-      botName=doc["BotName"].as<string>();
-      botUserName=doc["BotUsername"].as<string>();
-      botToken=doc["BotToken"].as<string>();
-    }
-
-    void Save() {
-      // To do: loop over access points
+      botName=    doc["BotName"    ].as<String>();
+      botUserName=doc["BotUsername"].as<String>();
+      botToken=   doc["BotToken"   ].as<String>();
+      Serial.println(botToken);
     }
 }; // tConfig
-
-// ======== GLOBAL VARIABLES ============= 
-tConfig config; // Configuration data, lives as JSON file in SPIFFS
-tData data;     // Global datastructure, volatile
-
-// Ensure only one process at a time writes to the global datastructure
-portMUX_TYPE dataAccessMux = portMUX_INITIALIZER_UNLOCKED;
-
-WiFiClientSecure secured_client;
-
-// Ensure only one process at a time uses wifi
-portMUX_TYPE connectionMux = portMUX_INITIALIZER_UNLOCKED;
 
 #endif // DATA_H

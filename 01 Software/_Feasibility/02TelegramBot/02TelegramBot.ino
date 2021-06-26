@@ -4,20 +4,33 @@
  *******************************************************************/
 
 #include "data.h"
-#include "helperfunctions.h"
-#include "telegram.h"
 #include <WiFi.h>
+#include <WiFiMulti.h>
 #include <WiFiClientSecure.h>
 #include <UniversalTelegramBot.h>
 
+// ============== TYPES ==============
+enum FanStatus_t 
+// ============ CONSTANTS ============
+const bool FORMAT_SPIFFS_IF_FAILED=false;
+const uint8_t RELAY_PIN = 18;
 const unsigned long BOT_MTBS = 1000; // mean time between scan messages
 
+// ======== GLOBAL VARIABLES =========
+tConfig config; // Configuration data, lives as JSON file in SPIFFS
+
+WiFiMulti wifiMulti;
 WiFiClientSecure secured_client;
-UniversalTelegramBot bot(BOT_TOKEN, secured_client);
+
+UniversalTelegramBot bot(config.botToken, secured_client);
 unsigned long bot_lasttime; // last time messages' scan has been done
 
-const int ledPin = LED_BUILTIN;
-int ledStatus = 0;
+// ======== HELPER FUNCTIONS =========
+
+void messageWithKeyboard(String& chat_id, String message) {
+  String keyboardJson = "[[\"/on\", \"/off\"],[\"/timer20\"],[\"/timer60\"],[\"/timer120\"]]";
+  bot.sendMessageWithReplyKeyboard(chat_id, message, "", keyboardJson, true);            
+}
 
 void handleNewMessages(int numNewMessages)
 {
@@ -33,77 +46,80 @@ void handleNewMessages(int numNewMessages)
     if (from_name == "")
       from_name = "Guest";
 
-    if (text == "/ledon")
+    if (text == "/on")
     {
-      digitalWrite(ledPin, LOW); // turn the LED on (HIGH is the voltage level)
-      ledStatus = 1;
-      bot.sendMessage(chat_id, "Led is ON", "");
+      digitalWrite(RELAY_PIN, HIGH); 
+      messageWithKeyboard(chat_id, "Fan switched on");
+      //bot.sendMessage(chat_id, "Fan is ON", "");
+      //String keyboardJson = "[[\"/on\", \"/off\"],[\"/status\"]]";
+      //bot.sendMessageWithReplyKeyboard(chat_id, "Fan is on", "", keyboardJson, true);            
     }
 
-    if (text == "/ledoff")
+    if (text == "/off")
     {
-      ledStatus = 0;
-      digitalWrite(ledPin, HIGH); // turn the LED off (LOW is the voltage level)
-      bot.sendMessage(chat_id, "Led is OFF", "");
-    }
-
-    if (text == "/status")
-    {
-      if (ledStatus)
-      {
-        bot.sendMessage(chat_id, "Led is ON", "");
-      }
-      else
-      {
-        bot.sendMessage(chat_id, "Led is OFF", "");
-      }
+      digitalWrite(RELAY_PIN, LOW); 
+      messageWithKeyboard(chat_id, "Fan switched off");
+      //bot.sendMessage(chat_id, "Fan is OFF", "");
+      //String keyboardJson = "[[\"/on\", \"/off\"],[\"/status\"]]";
+      //bot.sendMessageWithReplyKeyboard(chat_id, "Fan is off", "", keyboardJson, true);            
     }
 
     if (text == "/start")
     {
-      String welcome = "Welcome to Universal Arduino Telegram Bot library, " + from_name + ".\n";
-      welcome += "This is Flash Led Bot example.\n\n";
-      welcome += "/ledon : to switch the Led ON\n";
-      welcome += "/ledoff : to switch the Led OFF\n";
-      welcome += "/status : Returns current status of LED\n";
-      bot.sendMessage(chat_id, welcome, "Markdown");
+      messageWithKeyboard(chat_id, "Welcome!");
+      //String welcome = "Welcome to the bedroom fan controller, " + from_name + ".\n";
+      //welcome += "/on  : to switch the fan ON\n";
+      //welcome += "/off : to switch the fan OFF\n";
+      //bot.sendMessage(chat_id, welcome, "Markdown");
     }
   }
 }
 
 
+// ======== MAIN FUNCTIONS =========
 void setup()
 {
   Serial.begin(115200);
-  Serial.println();
-
-  pinMode(ledPin, OUTPUT); // initialize digital ledPin as an output.
-  delay(10);
-  digitalWrite(ledPin, HIGH); // initialize pin as off (active LOW)
-
-  // attempt to connect to Wifi network:
-  Serial.print("Connecting to Wifi SSID ");
-  Serial.print(WIFI_SSID);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  secured_client.setCACert(TELEGRAM_CERTIFICATE_ROOT); // Add root certificate for api.telegram.org
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    Serial.print(".");
-    delay(500);
+  pinMode(RELAY_PIN, OUTPUT); 
+  if(!SPIFFS.begin(FORMAT_SPIFFS_IF_FAILED)){
+      Serial.println("SPIFFS Mount Failed");
   }
-  Serial.print("\nWiFi connected. IP address: ");
-  Serial.println(WiFi.localIP());
 
+  config.load(); 
+
+  // Submit accesspoint data from config to the wifi station
+  for (auto& accessPoint : config.AccessPoints) {
+    Serial.print("Adding wifi access point ");
+    Serial.println(accessPoint.ssid);
+    wifiMulti.addAP(accessPoint.ssid.c_str(), accessPoint.password.c_str());
+  }
+
+  // Connect to wifi
+  Serial.print("Connecting Wifi");
+  while(wifiMulti.run()!=WL_CONNECTED) {
+    Serial.print(".");
+    delay(300);
+  }
+  Serial.printf("\nConnected to %s\n", WiFi.SSID());
+
+  // Sync the time
   Serial.print("Retrieving time: ");
   configTime(0, 0, "pool.ntp.org"); // get UTC time via NTP
   time_t now = time(nullptr);
   while (now < 24 * 3600)
   {
     Serial.print(".");
-    delay(100);
+    delay(300);
     now = time(nullptr);
   }
   Serial.println(now);
+  Serial.print("BotName ");
+  Serial.print(config.botName);
+  Serial.print(" token ");
+  Serial.println(config.botToken);
+
+  secured_client.setCACert(TELEGRAM_CERTIFICATE_ROOT); // Add root certificate for api.telegram.org
+  bot.updateToken(config.botToken);
 }
 
 void loop()
