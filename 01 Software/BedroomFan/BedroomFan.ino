@@ -7,7 +7,10 @@
 #include <WiFi.h>
 #include <WiFiMulti.h>
 #include <WiFiClientSecure.h>
+//#define ARDUINOJSON_DECODE_UNICODE 1
 #include <UniversalTelegramBot.h>
+
+#include <ESP32Ping.h> // Download from https://github.com/marian-craciunescu/ESP32Ping
 
 // ============== TYPES ==============
 enum tFanStatus { fsOn, fsOff, fsTimer };
@@ -17,15 +20,17 @@ enum tFanCommand { fcOn, fcOff, fcTimer20, fcTimer60, fcTimer120, fcNone };
 const bool FORMAT_SPIFFS_IF_FAILED=false;
 const uint8_t RELAY_PIN = 18;
 const unsigned long BOT_MTBS = 1000; // mean time between scan messages
-const char* const commands[] = {"💡 Fan on", "🛑 Fan off", "⏳ 20 min", "⏳ 1 hour", "⏳ 2 hours" };
-//const char* const commands[] = {"/U0001F4A1 Fan on", "/U0001F6D1 Fan off", "/U000023F3 20 min", "/U000023F3 1 hour", "/U000023F3 2 hours" };
+const char* const commands[] = {"💡 Fan on", "🛑 Fan off", "⏳ 20 min", "⏳ 1 hour", "⏳ 2 hours" }; // this works
+//const char* const commands[] = {"\u0001F4A1 Fan on", "\u0001F6D1 Fan off", "\u000023F3 20 min", "\u000023F3 1 hour", "\u000023F3 2 hours" }; // this does not work, even if ARDUINOJSON_DECODE_UNICODE=1
+const String keyboardJson = "[[\"" + String(commands[fcOn]) + "\", \"" + String(commands[fcOff]) + "\"], [\"" + String(commands[fcTimer20]) + "\", \"" + String(commands[fcTimer60]) + "\", \"" + String(commands[fcTimer120]) + "\"]]";
 
 // ======== GLOBAL VARIABLES =========
 tConfig config; // Configuration data, lives as JSON file in SPIFFS
-tFanStatus fanStatus;
+volatile tFanStatus fanStatus;
 volatile int timerCountDown;
 volatile unsigned int applicationRunning;
-
+volatile unsigned int fanRunning;
+ 
 hw_timer_t * timer = NULL;
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
@@ -38,8 +43,6 @@ unsigned long bot_lasttime; // last time messages' scan has been done
 // ======== HELPER FUNCTIONS =========
 
 void messageWithKeyboard(String& chat_id, String message) {
-  String keyboardJson = "[[\"" + String(commands[fcOn]) + "\", \"" + String(commands[fcOff]) + "\"], [\"" + String(commands[fcTimer20]) + "\", \"" + String(commands[fcTimer60]) + "\", \"" + String(commands[fcTimer120]) + "\"]]";
-  
   bot.sendMessageWithReplyKeyboard(chat_id, message, "Markdown", keyboardJson, true);            
 }
 
@@ -54,56 +57,60 @@ void handleNewMessages(int numNewMessages) {
     String chat_id = bot.messages[i].chat_id;
     String text = bot.messages[i].text;
 
-    String from_name = bot.messages[i].from_name;
-    if (from_name == "") from_name = "Guest";
+    //String from_name = bot.messages[i].from_name;
+    //if (from_name == "") from_name = "Guest";
 
     if (text == String(commands[fcOn])) {
-      messageWithKeyboard(chat_id, "Fan switched on");
+      messageWithKeyboard(chat_id, "💡 Fan switched on");
       command=fcOn;
     }
 
     if (text == String(commands[fcOff])) {
-      messageWithKeyboard(chat_id, "Fan switched off");
+      messageWithKeyboard(chat_id, "🛑 Fan switched off");
       command=fcOff;
     }
 
     if (text == String(commands[fcTimer20])) {
-      messageWithKeyboard(chat_id, "Fan will switch off after 20 minutes");
+      messageWithKeyboard(chat_id, "⏳ Fan will switch off after 20 minutes");
       command=fcTimer20;
     }
 
     if (text == String(commands[fcTimer60])) {
-      messageWithKeyboard(chat_id, "Fan will switch off after 1 hour");
+      messageWithKeyboard(chat_id, "⏳ Fan will switch off after 1 hour");
       command=fcTimer60;
     }
 
     if (text == String(commands[fcTimer120])) {
-      messageWithKeyboard(chat_id, "Fan will switch off after 2 hours");
+      messageWithKeyboard(chat_id, "⏳ Fan will switch off after 2 hours");
       command=fcTimer120;
     }
 
     // Forgive users for using capitals
     text.toLowerCase();
 
-    if (text == "/start")
-    {
-      messageWithKeyboard(chat_id, "Welcome!");
-    }
+    if (text == "/start") messageWithKeyboard(chat_id, "🍆 This statement was implemented for all my fans 🤪");
 
     if (text == "/status")
     {
-      String answer="Ventilator status: *";
-      if      (fanStatus==fsOff) answer+="Off*\n";
-      else if (fanStatus==fsOn ) answer+="On*\n";
-      else                       answer+="Timer*\n";
+      String answer="Status:\n";
+      if      (fanStatus==fsOff) answer+="🛑 Fan status: *Off*\n";
+      else if (fanStatus==fsOn ) answer+="💡 Fan status: *On*\n";
+      else                       answer+="⏳ Fan status: *Timer*\n";
 
-      if(fanStatus==fsTimer) answer+="Timer has *"+ String(1.0*timerCountDown/60, 2)+"* minutes left\n";
+      if(fanStatus==fsTimer) answer+="⌚ Timer has *"+ String(1.0*timerCountDown/60, 2)+"* minutes left\n";
       
-      answer+= "Application running for *" + String(1.0*applicationRunning/3600, 3)+"* hours\n";
-      answer+= "Chat ID *" + String(chat_id) + "*\n";
-      answer+= "Chat ID in config *" + String(config.botChatID) + "*\n";
-      answer+= "Free heap *" + String(esp_get_free_heap_size()) + "* bytes\n";
-      answer+= "Minimum heap *" + String(esp_get_minimum_free_heap_size()) + "* bytes\n";
+      answer+= "🏃 Application has been running for *" + String(1.0*applicationRunning/3600, 3)+"* hours\n";
+      answer+= "💨 Fan has been spinning for *" + String(1.0*fanRunning/3600, 3)+"* hours\n";
+      answer+= "🛂 Chat ID *" + String(chat_id) + "*\n";
+      answer+= "🎬 Chat for startup message *" + String(config.botChatID) + "*\n";
+      
+      if (Ping.ping(TELEGRAM_HOST)) 
+        answer+="⏱ Average ping time to Telegram *" + String(Ping.averageTime(),3) + "* ms\n";
+      else
+        answer+="🚧 No response from ping to Telegram\n";
+        
+      answer+= "🛰 Free heap *" + String(esp_get_free_heap_size()) + "* bytes\n";
+      answer+= "🥛 Minimum heap *" + String(esp_get_minimum_free_heap_size()) + "* bytes\n";
       
       messageWithKeyboard(chat_id, answer);
     } // message=status
@@ -148,6 +155,7 @@ void IRAM_ATTR onTimer() {
   portENTER_CRITICAL_ISR(&timerMux);
   timerCountDown--;
   applicationRunning++;
+  if(fanStatus!=fsOff) fanRunning++;
   portEXIT_CRITICAL_ISR(&timerMux);
 }
 
