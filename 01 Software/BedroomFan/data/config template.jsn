@@ -1,9 +1,0 @@
-{
-    "AccessPoints": [
-        { "SSID": "Starbux",             "password": "xxxxx", "timezone" : "Europe/Amsterdam", "lat": 52.25319, "lon": 6.78546 },
-        { "SSID": "Demcon-Guests",       "password": "xxxxx", "timezone" : "Europe/Amsterdam", "lat": 52.23852, "lon": 6.84676 },
-        { "SSID": "motorola one vision", "password": "xxxxx", "timezone" : "Europe/Amsterdam", "lat": 52.25325, "lon": 6.78576 }    ],
-    "BotName"     : "xxx",
-    "BotUsername" : "xxx",
-    "BotToken"    : "xxxxxxxxxxx:yyyyyyyyyyy-xxxxxxxxxxxxxxxxxxxxxxx"
-}
