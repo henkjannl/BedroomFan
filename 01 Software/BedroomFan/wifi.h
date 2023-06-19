@@ -11,17 +11,23 @@
 const uint32_t CONNECT_TIMEOUT_MS = 10*MS_PER_SEC;
 
 // ======== GLOBALS ================
+bool clockSynched = false;
+
 milliSecTimer reconnectTimer1 = milliSecTimer(  1*MS_PER_MIN, false ); // Reconnect attempt 1 after 1 min
 milliSecTimer reconnectTimer2 = milliSecTimer(  2*MS_PER_MIN, false ); // Reconnect attempt 2 after 2 min
 milliSecTimer reconnectTimer3 = milliSecTimer(  5*MS_PER_MIN, false ); // Reconnect attempt 3 after 5 min
 milliSecTimer restartTimer    = milliSecTimer( 10*MS_PER_MIN, false ); // Restart ESP after 10 min
 
-milliSecTimer syncTimeTimer   = milliSecTimer(  3*MS_PER_DAY, true  ); // Sync time every 3 days
+milliSecTimer syncClockTimer  = milliSecTimer(  3*MS_PER_DAY, true  ); // Sync time every 3 days
 
 WiFiMulti wifiMulti;
 
-void syncTime() {
-  // Sync time with NTP
+void syncClock() {
+
+  // Immediately return if the clock was already synched a limited time ago
+  if( clockSynched and !( syncClockTimer.lapsed() ) ) return;
+
+  // Sync clock with NTP
   Serial.println("Sync clock with timeserver");
   configTzTime(localTimezone, "time.google.com", "time.windows.com", "pool.ntp.org");
   
@@ -29,7 +35,8 @@ void syncTime() {
   
   if( getLocalTime(&timeinfo) ){
     Serial.println("  Got the time from NTP");  
-    syncTimeTimer.reset();
+    syncClockTimer.reset();
+    clockSynched = true;
     addToEventLogfile( "Time synched" );
   } else {
     Serial.println("  Failed to obtain time");
@@ -57,8 +64,8 @@ void setupWifi() {
 
   WiFi.setAutoReconnect(true);
 
-  syncTimeTimer.previous = 0; // Time was not synched yet
-  syncTime();
+  // Attempt to sync the clock for the first time
+  syncClock();          
 };
 
 void loopWifi() {
@@ -121,8 +128,8 @@ void loopWifi() {
     addToEventLogfile( "Restarting ESP due to loss of WiFi connection" );
     ESP.restart();
   };
-
-  // If time was not yet synched, but wifi is enabled, try synching with timeserver
-  if ( (WiFi.status() == WL_CONNECTED) and syncTimeTimer.lapsed() ) syncTime();
+ 
+  // If WiFi is available, sync clock if needed
+  if ( WiFi.status() == WL_CONNECTED ) syncClock();
 
 }; // loopWifi()

@@ -13,9 +13,7 @@ Version history
     Emojis as constants
     Over the air updates
     Event logger implemented
-
-To do:
-  Sync time every few days
+    Sync clock with time server every few days
 */
 
 #include "MyCredentials.h"
@@ -25,6 +23,36 @@ To do:
 #include "wifi.h"
 #include "telegram.h"
 #include "ota.h"
+
+/* 
+MyCredentials.h is not included since it is in .gitignore
+This file contains all private user specific data
+The template for this file is:
+
+      #pragma once
+
+      #include <map>
+
+      // Password to upload software through wireless port
+      #define OTApassword "********"
+
+      // Telegram token for the bedroom fan bot
+      const char* token =  "##########:aaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbb";
+
+      // Telegram user ID for the user to be notified on startup
+      int64_t userid = ########;
+
+      // WiFi access points
+      std::map< String , String > ACCESS_POINTS { 
+        { "SSID-1", "pwd1" }, 
+        { "SSID-2", "pwd2" }, 
+        { "SSID-3", "pwd3" } 
+      };
+
+      // Timezone where the device is located
+      // https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
+      #define localTimezone "CET-1CEST,M3.5.0,M10.5.0/3"
+*/
 
 // ============== TYPES ==============
 
