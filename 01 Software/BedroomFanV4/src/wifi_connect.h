@@ -4,8 +4,9 @@
 #include <WiFiMulti.h>
 #include <map>
 
+#include "eventLog.h"
 #include "timer.h"          // milliSecTimer
-#include "MyCredentials.h"  // This file contains private data such as wifi passwords
+#include "myCredentials.h"  // This file contains private data such as wifi passwords
 
 // ======== CONSTANTS ================
 const uint32_t CONNECT_TIMEOUT_MS = 10*MS_PER_SEC;
@@ -30,11 +31,11 @@ void syncClock() {
   // Sync clock with NTP
   Serial.println("Sync clock with timeserver");
   configTzTime(localTimezone, "time.google.com", "time.windows.com", "pool.ntp.org");
-  
+
   struct tm timeinfo;
-  
+
   if( getLocalTime(&timeinfo) ){
-    Serial.println("  Got the time from NTP");  
+    Serial.println("  Got the time from NTP");
     syncClockTimer.reset();
     clockSynched = true;
     addToEventLogfile( "Time synched" );
@@ -48,7 +49,7 @@ void setupWifi() {
   Serial.println( "Initialize WiFi" );
   WiFi.mode(WIFI_STA);
 
-  // Add wifi access points 
+  // Add wifi access points
   for (const auto &ap : ACCESS_POINTS ) {
     //Serial.printf( "%s %s\n", ap.first.c_str(), ap.second.c_str() );
     wifiMulti.addAP( ap.first.c_str(), ap.second.c_str() );
@@ -65,7 +66,7 @@ void setupWifi() {
   WiFi.setAutoReconnect(true);
 
   // Attempt to sync the clock for the first time
-  syncClock();          
+  syncClock();
 };
 
 void loopWifi() {
@@ -74,7 +75,7 @@ void loopWifi() {
   uint8_t reconnectAttempt = 0;
   char item[80];
   struct tm timeinfo;
-  
+
   bool wifiConnected = ( WiFi.status() == WL_CONNECTED );
 
   // Report if connection status is changed
@@ -116,7 +117,7 @@ void loopWifi() {
       wifiMulti.run( CONNECT_TIMEOUT_MS );
     }
 
-    snprintf( item, sizeof(item), "%s attempt to reconnect WiFi after %d attempts", 
+    snprintf( item, sizeof(item), "%s attempt to reconnect WiFi after %d attempts",
       ( WiFi.status() == WL_CONNECTED) ? "Successful" : "Unsuccessful", reconnectAttempt );
 
     addToEventLogfile( item );
@@ -128,7 +129,7 @@ void loopWifi() {
     addToEventLogfile( "Restarting ESP due to loss of WiFi connection" );
     ESP.restart();
   };
- 
+
   // If WiFi is available, sync clock if needed
   if ( WiFi.status() == WL_CONNECTED ) syncClock();
 

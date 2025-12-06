@@ -37,12 +37,12 @@ const char EMOTICON_MAIN[]      = { 0xf0, 0x9f, 0x94, 0x99, 0x00 }; // Back arro
 enum keyboard_t { kbMain, kbSettings };
 
 // ======== GLOBAL VARIABLES ================
-WiFiClientSecure client;  
+WiFiClientSecure client;
 AsyncTelegram2 myBot(client);
 InlineKeyboard mainKeyboard, settingsKeyboard;
 keyboard_t currentKeyboard = kbMain;
 
-std::map<keyboard_t, InlineKeyboard* > KEYBOARDS = { 
+std::map<keyboard_t, InlineKeyboard* > KEYBOARDS = {
   { kbMain,             &mainKeyboard             },
   { kbSettings,         &settingsKeyboard         },
 };
@@ -61,7 +61,7 @@ String convertToHexString( String input ) {
 }
 
 void sendMessageToKeyUser( String msg ) {
-  myBot.sendTo(userid, msg.c_str(), mainKeyboard.getJSON() );  
+  myBot.sendTo(userid, msg.c_str(), mainKeyboard.getJSON() );
 }
 
 String StatusMessage() {
@@ -73,11 +73,11 @@ String StatusMessage() {
     case fsOn:
       result = String( EMOTICON_WIND ) + " Fan is switched on";
     break;
-    
+
     case fsOff:
       result = String( EMOTICON_STOP ) + " Fan is switched off";
     break;
-    
+
     case fsTimer:
       remainingSeconds = fanTimer.remaining()/1000;
 
@@ -91,7 +91,7 @@ String StatusMessage() {
   }
 
   return result;
-};  
+};
 
 // Callback functions definition for inline keyboard buttons
 void onQueryMain( const TBMessage &queryMsg ) {
@@ -142,7 +142,7 @@ void onQuerySettings(const TBMessage &queryMsg) {
 
   if( queryMsg.callbackQueryData == CB_STATUS ) {
     newMessage = String("Software version: ") + version;
-  }  
+  }
   else if( queryMsg.callbackQueryData == CB_EVENTLOG ) {
     newMessage = "Download event log";
     addToEventLogfile( String("Event log requested by ") + userName );
@@ -153,19 +153,19 @@ void onQuerySettings(const TBMessage &queryMsg) {
     }
     else
       Serial.println("Can't open the event log file");
-  }  
+  }
   else if( queryMsg.callbackQueryData == CB_EVENTCLR ) {
     newMessage = "Event log cleared";
     newEventLogfile();
     addToEventLogfile( String("Event log cleared by ") + userName );
-  }  
+  }
   else if( queryMsg.callbackQueryData == CB_MAIN ) {
     newMessage = "Back to main menu";
     currentKeyboard = kbMain;
   }
   else newMessage = "Command not recognized";
 
-  newMessage += "\n" + StatusMessage();  
+  newMessage += "\n" + StatusMessage();
   myBot.editMessage( queryMsg.chatId, queryMsg.messageID, newMessage, *KEYBOARDS[ currentKeyboard ] );
   Serial.println( newMessage );
 }; // onQuerySettings
@@ -174,38 +174,38 @@ void addInlineKeyboard() {
   String btntext;
 
   // Add buttons for main keyboard
-  btntext=String(EMOTICON_WIND)   + " Fan on";       
+  btntext=String(EMOTICON_WIND)   + " Fan on";
   mainKeyboard.addButton(btntext.c_str(), CB_FAN_ON,     KeyboardButtonQuery, onQueryMain);
-  btntext=String(EMOTICON_STOP)  + " Fan off";      
+  btntext=String(EMOTICON_STOP)  + " Fan off";
   mainKeyboard.addButton(btntext.c_str(), CB_FAN_OFF,    KeyboardButtonQuery, onQueryMain);
   mainKeyboard.addRow();
 
-  btntext=String(EMOTICON_HOURGLASS) + " 20 min";    
+  btntext=String(EMOTICON_HOURGLASS) + " 20 min";
   mainKeyboard.addButton(btntext.c_str(), CB_TMR_20MIN,  KeyboardButtonQuery, onQueryMain);
-  btntext=String(EMOTICON_HOURGLASS) + " 1 hour";    
+  btntext=String(EMOTICON_HOURGLASS) + " 1 hour";
   mainKeyboard.addButton(btntext.c_str(), CB_TMR_1HR,    KeyboardButtonQuery, onQueryMain);
-  btntext=String(EMOTICON_HOURGLASS) + " 4 hours";      
+  btntext=String(EMOTICON_HOURGLASS) + " 4 hours";
   mainKeyboard.addButton(btntext.c_str(), CB_TMR_4HRS,   KeyboardButtonQuery, onQueryMain);
   mainKeyboard.addRow();
 
-  btntext=String(EMOTICON_SETTINGS) + " Settings";   
+  btntext=String(EMOTICON_SETTINGS) + " Settings";
   mainKeyboard.addButton(btntext.c_str(), CB_SETTINGS,   KeyboardButtonQuery, onQueryMain);
   mainKeyboard.addRow();
 
   // Add buttons for settings keyboard
-  btntext=String(EMOTICON_EVENTLOG) + " Download event log";   
+  btntext=String(EMOTICON_EVENTLOG) + " Download event log";
   settingsKeyboard.addButton(btntext.c_str(), CB_EVENTLOG, KeyboardButtonQuery, onQuerySettings);
   settingsKeyboard.addRow();
 
-  btntext=String(EMOTICON_CLEAR) + " Clear event log";   
+  btntext=String(EMOTICON_CLEAR) + " Clear event log";
   settingsKeyboard.addButton(btntext.c_str(), CB_EVENTCLR, KeyboardButtonQuery, onQuerySettings);
   settingsKeyboard.addRow();
 
-  btntext=String(EMOTICON_STATUS) + " Status";   
+  btntext=String(EMOTICON_STATUS) + " Status";
   settingsKeyboard.addButton(btntext.c_str(), CB_STATUS, KeyboardButtonQuery, onQuerySettings);
   settingsKeyboard.addRow();
 
-  btntext=String(EMOTICON_MAIN) + " Main menu";   
+  btntext=String(EMOTICON_MAIN) + " Main menu";
   settingsKeyboard.addButton(btntext.c_str(), CB_MAIN, KeyboardButtonQuery, onQuerySettings);
   settingsKeyboard.addRow();
 
@@ -215,7 +215,7 @@ void addInlineKeyboard() {
 }
 
 void setupTelegram() {
-  
+
   // Initialize Telegram
   Serial.println("Setup Telegram");
   client.setCACert(telegram_cert);
@@ -231,7 +231,7 @@ void setupTelegram() {
   Serial.println(myBot.getBotName());
 
   addInlineKeyboard();
-  
+
   // Try to set the default commands
   myBot.deleteMyCommands();
 
@@ -263,7 +263,7 @@ void loopTelegram() {
     // check what kind of message I received
     String tgReply;
     MessageType msgType = msg.messageType;
-    
+
     switch (msgType) {
       case MessageText :
         // received a text message
@@ -271,22 +271,22 @@ void loopTelegram() {
         Serial.print("Text message received: ");
         Serial.println(tgReply);
 
-        if (tgReply.equalsIgnoreCase("/start")) {          
+        if (tgReply.equalsIgnoreCase("/start")) {
           String text = String(EMOTICON_WELCOME) + " Welcome!";
-          myBot.sendMessage(msg, text.c_str(), mainKeyboard);      
-          Serial.printf("Start command received from %d\n", msg.chatId);    
-        }        
+          myBot.sendMessage(msg, text.c_str(), mainKeyboard);
+          Serial.printf("Start command received from %d\n", msg.chatId);
+        }
         else {
           // write back feedback message and show a hint
           String text = String("const char EMOTICON[] = ") + convertToHexString( msg.text );
           myBot.sendMessage(msg, text.c_str(), mainKeyboard);
         }
         break;
-        
+
         case MessageQuery:
           // Handled by message query callback functions
           break;
-        
+
         default:
           break;
     }

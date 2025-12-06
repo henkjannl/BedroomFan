@@ -1,12 +1,17 @@
+#include <Arduino.h>
+
 /*******************************************************************
     A telegram bot for ESP32 that controls a
     fan to cool down the bedroom on warm summer days
  *******************************************************************/
-
-#include <SPIFFS.h>
-
-const String version = "3.0";
+const String version = "4.0";
 const bool FORMAT_SPIFFS_IF_FAILED = true;
+
+/*
+To do:
+sync clock
+add clock to userinterface
+*/
 
 /*
 Version history
@@ -18,43 +23,44 @@ Version history
     Event logger implemented
     Sync clock with time server every few days
 3.0 Removed over the air updates`
+4.0 Ported to PlatformIO
+5.0 Included clock to switch on and off the fan at specific times
 */
 
-#include "a_myCredentials.h"
-#include "b_eventlog.h"
-#include "c_timer.h"
-#include "d_fancontrol.h"
-#include "e_wifi.h"
-#include "f_telegram.h"
+#include <SPIFFS.h>
+
+#include "myCredentials.h"
+#include "eventlog.h"
+#include "timer.h"
+#include "fancontrol.h"
+#include "wifi_connect.h"
+#include "telegram.h"
+
 
 /*
 MyCredentials.h is not included since it is in .gitignore
 This file contains all private user specific data
 The template for this file is:
 
-      #pragma once
+  #pragma once
 
-      #include <map>
+  #include <map>
 
-      // Password to upload software through wireless port
-      #define OTApassword "********"
+  // Telegram token for the bedroom fan bot
+  const char* token =  "##########:aaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbb";
 
-      // Telegram token for the bedroom fan bot
-      const char* token =  "##########:aaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbb";
+  // Telegram user ID for the user to be notified on startup
+  int64_t userid = ########;
 
-      // Telegram user ID for the user to be notified on startup
-      int64_t userid = ########;
+  // WiFi access points
+  std::map< String , String > ACCESS_POINTS {
+      { "SSID1",    "PASSWORD1" },
+      { "SSID2",    "PASSWORD2" },
+  };
 
-      // WiFi access points
-      std::map< String , String > ACCESS_POINTS {
-        { "SSID-1", "pwd1" },
-        { "SSID-2", "pwd2" },
-        { "SSID-3", "pwd3" }
-      };
-
-      // Timezone where the device is located
-      // https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
-      #define localTimezone "CET-1CEST,M3.5.0,M10.5.0/3"
+  // Timezone where the device is located
+  // https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
+  #define localTimezone "CET-1CEST,M3.5.0,M10.5.0/3"
 */
 
 // ============== TYPES ==============

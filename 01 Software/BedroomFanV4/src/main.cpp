@@ -1,11 +1,10 @@
+#include <Arduino.h>
+
 /*******************************************************************
     A telegram bot for ESP32 that controls a
     fan to cool down the bedroom on warm summer days
  *******************************************************************/
-
-#include <SPIFFS.h>
-
-const String version = "3.0";
+const String version = "4.0";
 const bool FORMAT_SPIFFS_IF_FAILED = true;
 
 /*
@@ -18,14 +17,18 @@ Version history
     Event logger implemented
     Sync clock with time server every few days
 3.0 Removed over the air updates`
+4.0 Ported to PlatformIO
 */
 
-#include "a_myCredentials.h"
-#include "b_eventlog.h"
-#include "c_timer.h"
-#include "d_fancontrol.h"
-#include "e_wifi.h"
-#include "f_telegram.h"
+#include <SPIFFS.h>
+
+#include "myCredentials.h"
+#include "eventlog.h"
+#include "timer.h"
+#include "fancontrol.h"
+#include "wifi_connect.h"
+#include "telegram.h"
+
 
 /*
 MyCredentials.h is not included since it is in .gitignore

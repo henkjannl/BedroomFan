@@ -2,6 +2,7 @@
 config.jsn
 secret*.*
 MyCredentials.*
+a_myCredentials.*
 
 # Prerequisites
 *.d
