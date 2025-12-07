@@ -14,6 +14,7 @@ using namespace std;
 #define CB_TMR_1HR    "cb1hr"
 #define CB_TMR_4HRS   "cb4hrs"
 #define CB_SETTINGS   "cbSettings"
+#define CB_FAN_CLOCK   "cbClock"
 
 // Settings menu
 #define CB_EVENTLOG   "cbEventLog"
@@ -32,6 +33,7 @@ const char EMOTICON_CLEAR[]     = { 0xf0, 0x9f, 0x97, 0x91, 0x00 };     // Garba
 const char EMOTICON_SETTINGS[]  = { 0xe2, 0x9a, 0x99, 0xef, 0xb8, 0x8f, 0x00 };
 const char EMOTICON_STATUS[]    = { 0xf0, 0x9f, 0xa9, 0xba, 0x00 }; // Staethoscope
 const char EMOTICON_MAIN[]      = { 0xf0, 0x9f, 0x94, 0x99, 0x00 }; // Back arrow
+const char EMOTICON_CLOCK[]     = { 0xf0, 0x9f, 0x95, 0x90, 0x00 }; // Clock
 
 // ======== TYPES ================
 enum keyboard_t { kbMain, kbSettings };
@@ -72,26 +74,31 @@ String StatusMessage() {
   switch(fanStatus) {
     case fsOn:
       result = String( EMOTICON_WIND ) + " Fan is switched on";
-    break;
+      break;
 
     case fsOff:
       result = String( EMOTICON_STOP ) + " Fan is switched off";
-    break;
+      break;
 
     case fsTimer:
-      remainingSeconds = fanTimer.remaining()/1000;
+      remainingSeconds = fanTimer.remaining() / 1000;
 
-      if(remainingSeconds>=60)
-        snprintf( item, sizeof(item), " Fan will switch off after %d minutes", int(remainingSeconds/60) );
+      if (remainingSeconds >= 60)
+        snprintf(item, sizeof(item), " Fan will switch off after %d minutes", int(remainingSeconds / 60));
       else
-        snprintf( item, sizeof(item), " Fan will switch off after %d seconds", int(remainingSeconds) );
+        snprintf(item, sizeof(item), " Fan will switch off after %d seconds", int(remainingSeconds));
 
       result = String( EMOTICON_HOURGLASS ) + item;
-    break;
+      break;
+
+    case fsClock:
+      result = String(EMOTICON_CLOCK) + " Fan is controlled by clock schedule.";
+      break;
+    }
   }
 
   return result;
-};
+}
 
 // Callback functions definition for inline keyboard buttons
 void onQueryMain( const TBMessage &queryMsg ) {
@@ -108,6 +115,11 @@ void onQueryMain( const TBMessage &queryMsg ) {
     newMessage = String(EMOTICON_STOP) + " Fan is switched off.";
     addToEventLogfile( String("Fan switched off by ") + userName );
     switchOffFan();
+  }
+  else if ( queryMsg.callbackQueryData == CB_FAN_CLOCK ) {
+    newMessage = String(EMOTICON_CLOCK) + " Fan is controlled by clock schedule.";
+    addToEventLogfile( String("Fan switched to clock mode by ") + userName );
+    setFanClockMode();
   }
   else if( queryMsg.callbackQueryData == CB_TMR_20MIN ) {
     newMessage = String(EMOTICON_HOURGLASS) + " Fan is switched on for 20 minutes.";
@@ -174,22 +186,26 @@ void addInlineKeyboard() {
   String btntext;
 
   // Add buttons for main keyboard
-  btntext=String(EMOTICON_WIND)   + " Fan on";
-  mainKeyboard.addButton(btntext.c_str(), CB_FAN_ON,     KeyboardButtonQuery, onQueryMain);
-  btntext=String(EMOTICON_STOP)  + " Fan off";
-  mainKeyboard.addButton(btntext.c_str(), CB_FAN_OFF,    KeyboardButtonQuery, onQueryMain);
+  btntext = String(EMOTICON_WIND)   + " Fan on";
+  mainKeyboard.addButton(btntext.c_str(), CB_FAN_ON,  KeyboardButtonQuery, onQueryMain);
+  btntext = String(EMOTICON_STOP)   + " Fan off";
+  mainKeyboard.addButton(btntext.c_str(), CB_FAN_OFF, KeyboardButtonQuery, onQueryMain);
   mainKeyboard.addRow();
 
-  btntext=String(EMOTICON_HOURGLASS) + " 20 min";
-  mainKeyboard.addButton(btntext.c_str(), CB_TMR_20MIN,  KeyboardButtonQuery, onQueryMain);
-  btntext=String(EMOTICON_HOURGLASS) + " 1 hour";
-  mainKeyboard.addButton(btntext.c_str(), CB_TMR_1HR,    KeyboardButtonQuery, onQueryMain);
-  btntext=String(EMOTICON_HOURGLASS) + " 4 hours";
-  mainKeyboard.addButton(btntext.c_str(), CB_TMR_4HRS,   KeyboardButtonQuery, onQueryMain);
+  btntext = String(EMOTICON_CLOCK) + " Clock";
+  mainKeyboard.addButton(btntext.c_str(), CB_FAN_CLOCK, KeyboardButtonQuery, onQueryMain);
   mainKeyboard.addRow();
 
-  btntext=String(EMOTICON_SETTINGS) + " Settings";
-  mainKeyboard.addButton(btntext.c_str(), CB_SETTINGS,   KeyboardButtonQuery, onQueryMain);
+  btntext = String(EMOTICON_HOURGLASS) + " 20 min";
+  mainKeyboard.addButton(btntext.c_str(), CB_TMR_20MIN, KeyboardButtonQuery, onQueryMain);
+  btntext = String(EMOTICON_HOURGLASS) + " 1 hour";
+  mainKeyboard.addButton(btntext.c_str(), CB_TMR_1HR,   KeyboardButtonQuery, onQueryMain);
+  btntext = String(EMOTICON_HOURGLASS) + " 4 hours";
+  mainKeyboard.addButton(btntext.c_str(), CB_TMR_4HRS,  KeyboardButtonQuery, onQueryMain);
+  mainKeyboard.addRow();
+
+  btntext = String(EMOTICON_SETTINGS) + " Settings";
+  mainKeyboard.addButton(btntext.c_str(), CB_SETTINGS,  KeyboardButtonQuery, onQueryMain);
   mainKeyboard.addRow();
 
   // Add buttons for settings keyboard
