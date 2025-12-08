@@ -17,10 +17,22 @@ using namespace std;
 #define CB_FAN_CLOCK   "cbClock"
 
 // Settings menu
+#define CB_CLOCK_ON   "cbClockOn"
+#define CB_CLOCK_OFF  "cbClockOff"
 #define CB_EVENTLOG   "cbEventLog"
 #define CB_EVENTCLR   "cbEventClr"
 #define CB_STATUS     "cbStatus"
 #define CB_MAIN       "cbMain"
+
+// Clock edit menu
+#define CB_CLK_ON_MHR     "cbClkMHr"
+#define CB_CLK_ON_PHR     "cbClkPHr"
+#define CB_CLK_ON_M15     "cbClkM15"
+#define CB_CLK_ON_P15     "cbClkP15"
+#define CB_CLK_OFF_MHR    "cbClkMHr"
+#define CB_CLK_OFF_PHR    "cbClkPHr"
+#define CB_CLK_OFF_M15    "cbClkM15"
+#define CB_CLK_OFF_P15    "cbClkP15"
 
 // ======== CONSTANTS ================
 const char EMOTICON_WELCOME[]   = { 0xf0, 0x9f, 0x99, 0x8b, 0xe2, 0x80, 0x8d, 0xe2, 0x99, 0x80, 0xef, 0xb8, 0x8f, 0x00 };
@@ -36,18 +48,23 @@ const char EMOTICON_MAIN[]      = { 0xf0, 0x9f, 0x94, 0x99, 0x00 }; // Back arro
 const char EMOTICON_CLOCK[]     = { 0xf0, 0x9f, 0x95, 0x90, 0x00 }; // Clock
 
 // ======== TYPES ================
-enum keyboard_t { kbMain, kbSettings };
+enum keyboard_t { kbMain, kbSettings, kbClock };
+enum ClockEditMode { CEM_NONE, CEM_ON, CEM_OFF };
 
 // ======== GLOBAL VARIABLES ================
 WiFiClientSecure client;
 AsyncTelegram2 myBot(client);
-InlineKeyboard mainKeyboard, settingsKeyboard;
+InlineKeyboard mainKeyboard, settingsKeyboard, clockKeyboard;
 keyboard_t currentKeyboard = kbMain;
 
+
 std::map<keyboard_t, InlineKeyboard* > KEYBOARDS = {
-  { kbMain,             &mainKeyboard             },
-  { kbSettings,         &settingsKeyboard         },
+  { kbMain,     &mainKeyboard     },
+  { kbSettings, &settingsKeyboard },
+  { kbClock,    &clockKeyboard    },
 };
+
+ClockEditMode clockEditMode = CEM_NONE;
 
 // ======== FUNCTIONS ================
 
@@ -95,8 +112,13 @@ String StatusMessage() {
       result = String(EMOTICON_CLOCK) + " Fan is controlled by clock schedule.";
       break;
     }
-  }
+  return result;
+}
 
+String clockStatus() {
+  String result;
+  result =  String("Clock ON time: ")  + clock_on. to_String() + "\n";
+  result += String("Clock OFF time: ") + clock_off.to_String() + "\n";
   return result;
 }
 
@@ -182,6 +204,68 @@ void onQuerySettings(const TBMessage &queryMsg) {
   Serial.println( newMessage );
 }; // onQuerySettings
 
+
+void onQueryClock(const TBMessage &queryMsg) {
+  String newMessage;
+  String userName = queryMsg.sender.firstName + " " + queryMsg.sender.lastName;
+  char item[80];
+  struct tm * timeinfo;
+
+  if( queryMsg.callbackQueryData == CB_CLOCK_ON ) {
+    newMessage = String(EMOTICON_CLOCK) + " Changing when the lights are switched on";
+    currentKeyboard = kbSettings;
+  }
+  else if( queryMsg.callbackQueryData == CB_CLK_ON_MHR ) {
+    clock_on.add_minutes(-60);
+    newMessage = clockStatus();
+    currentKeyboard = kbClock;
+  }
+  else if( queryMsg.callbackQueryData == CB_CLK_ON_PHR ) {
+    clock_on.add_minutes(60);
+    newMessage = clockStatus();
+    currentKeyboard = kbClock;
+  }
+  else if( queryMsg.callbackQueryData == CB_CLK_ON_M15 ) {
+    clock_on.add_minutes(-15);
+    newMessage = clockStatus();
+    currentKeyboard = kbClock;
+  }
+  else if( queryMsg.callbackQueryData == CB_CLK_ON_P15 ) {
+    clock_on.add_minutes(15);
+    newMessage = clockStatus();
+    currentKeyboard = kbClock;
+  }
+  else if( queryMsg.callbackQueryData == CB_CLK_OFF_MHR ) {
+    clock_off.add_minutes(-60);
+    newMessage = clockStatus();
+    currentKeyboard = kbClock;
+  }
+  else if( queryMsg.callbackQueryData == CB_CLK_OFF_PHR ) {
+    clock_off.add_minutes(60);
+    newMessage = clockStatus();
+    currentKeyboard = kbClock;
+  }
+  else if( queryMsg.callbackQueryData == CB_CLK_OFF_M15 ) {
+    clock_off.add_minutes(-15);
+    newMessage = clockStatus();
+    currentKeyboard = kbClock;
+  }
+  else if( queryMsg.callbackQueryData == CB_CLK_OFF_P15 ) {
+    clock_off.add_minutes(15);
+    newMessage = clockStatus();
+    currentKeyboard = kbClock;
+  }
+  else if( queryMsg.callbackQueryData == CB_MAIN) {
+    newMessage = clockStatus();
+    currentKeyboard = kbMain;
+  }
+  else newMessage = "Command not recognized";
+
+  newMessage += "\n" + StatusMessage();
+  myBot.editMessage( queryMsg.chatId, queryMsg.messageID, newMessage, *KEYBOARDS[ currentKeyboard ] );
+  Serial.println( newMessage );
+}; // onQueryClock
+
 void addInlineKeyboard() {
   String btntext;
 
@@ -209,6 +293,14 @@ void addInlineKeyboard() {
   mainKeyboard.addRow();
 
   // Add buttons for settings keyboard
+  btntext=String(EMOTICON_CLOCK) + " Clock ON time";
+  settingsKeyboard.addButton(btntext.c_str(), CB_CLOCK_ON, KeyboardButtonQuery, onQuerySettings);
+  settingsKeyboard.addRow();
+
+  btntext=String(EMOTICON_CLOCK) + " Clock OFF time";
+  settingsKeyboard.addButton(btntext.c_str(), CB_CLOCK_OFF, KeyboardButtonQuery, onQuerySettings);
+  settingsKeyboard.addRow();
+
   btntext=String(EMOTICON_EVENTLOG) + " Download event log";
   settingsKeyboard.addButton(btntext.c_str(), CB_EVENTLOG, KeyboardButtonQuery, onQuerySettings);
   settingsKeyboard.addRow();
@@ -223,6 +315,38 @@ void addInlineKeyboard() {
 
   btntext=String(EMOTICON_MAIN) + " Main menu";
   settingsKeyboard.addButton(btntext.c_str(), CB_MAIN, KeyboardButtonQuery, onQuerySettings);
+  settingsKeyboard.addRow();
+
+  btntext = "<<ON hr";
+  clockKeyboard.addButton(btntext.c_str(), CB_CLK_ON_MHR, KeyboardButtonQuery, onQueryClock);
+
+  btntext = "ON hr>>";
+  clockKeyboard.addButton(btntext.c_str(), CB_CLK_ON_PHR, KeyboardButtonQuery, onQueryClock);
+  clockKeyboard.addRow();
+
+  btntext = "<<ON 15";
+  clockKeyboard.addButton(btntext.c_str(), CB_CLK_ON_M15, KeyboardButtonQuery, onQueryClock);
+
+  btntext = "ON 15>>";
+  clockKeyboard.addButton(btntext.c_str(), CB_CLK_ON_P15, KeyboardButtonQuery, onQueryClock);
+  clockKeyboard.addRow();
+
+  btntext = "<<OFF hr";
+  clockKeyboard.addButton(btntext.c_str(), CB_CLK_OFF_MHR, KeyboardButtonQuery, onQueryClock);
+
+  btntext = "OFF hr>>";
+  clockKeyboard.addButton(btntext.c_str(), CB_CLK_OFF_PHR, KeyboardButtonQuery, onQueryClock);
+  clockKeyboard.addRow();
+
+  btntext = "<<OFF 15";
+  clockKeyboard.addButton(btntext.c_str(), CB_CLK_OFF_M15, KeyboardButtonQuery, onQueryClock);
+
+  btntext = "OFF 15>>";
+  clockKeyboard.addButton(btntext.c_str(), CB_CLK_OFF_P15, KeyboardButtonQuery, onQueryClock);
+  clockKeyboard.addRow();
+
+  btntext=String(EMOTICON_MAIN) + " Main menu";
+  settingsKeyboard.addButton(btntext.c_str(), CB_MAIN, KeyboardButtonQuery, onQueryClock);
   settingsKeyboard.addRow();
 
   // Add both inline keyboards to the bot

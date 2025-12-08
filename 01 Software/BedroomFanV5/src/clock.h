@@ -3,7 +3,8 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
-
+#include <sstream>
+#include <iomanip>
 
 /*
 EXAMPLE USAGE:
@@ -34,6 +35,10 @@ struct TimeOfDay {
     // Default constructor
     TimeOfDay() = default;
 
+    void add_minutes(int mins) {
+        minutes_after_midnight = (minutes_after_midnight + mins) % (24 * 60);
+    }
+
     // Parse "h:mm" or "hh:mm"
     bool parse(const std::string& s) {
         int h, m;
@@ -58,6 +63,12 @@ struct TimeOfDay {
     }
 
     // Optional: return string like "hh:mm"
+    String to_String() const {
+        int h = minutes_after_midnight / 60;
+        int m = minutes_after_midnight % 60;
+        return String(h) + ":" + (m < 10 ? "0" : "") + String(m);
+    }
+
     std::string to_string() const {
         int h = minutes_after_midnight / 60;
         int m = minutes_after_midnight % 60;
