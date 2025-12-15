@@ -410,11 +410,14 @@ void loopTelegram() {
         tgReply = msg.text;
         Serial.print("Text message received: ");
         Serial.println(tgReply);
+        Serial.print("From chatID: ");
+        Serial.println(msg.chatId);
 
         if (tgReply.equalsIgnoreCase("/start")) {
           String text = String(EMOTICON_WELCOME) + " Welcome!";
-          myBot.sendMessage(msg, text.c_str(), mainKeyboard);
-          Serial.printf("Start command received from %d\n", msg.chatId);
+          bool ok = myBot.sendMessage(msg, "ping");
+          Serial.printf("sendMessage(ping) ok=%d chatId=%lld\n", ok, (long long)msg.chatId);
+          // Serial.printf("Start command received from %d\n", msg.chatId);
         }
         else {
           // write back feedback message and show a hint
