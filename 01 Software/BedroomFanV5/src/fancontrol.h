@@ -13,6 +13,8 @@ using namespace std;
 
 // ======== CONSTANTS ================
 const uint8_t RELAY_PIN = 18;
+const bool C_ON = LOW;
+const bool C_OFF = HIGH;
 
 // ======== TYPES ================
 enum tFanStatus { fsOn, fsOff, fsTimer, fsClock };
@@ -31,12 +33,12 @@ TimeOfDay clock_off(22, 00);
 
 void switchOnFan() {
   fanStatus=fsOn;
-  digitalWrite(RELAY_PIN, HIGH);
+  digitalWrite(RELAY_PIN, C_ON);
 }
 
 void switchOffFan() {
   fanStatus=fsOff;
-  digitalWrite(RELAY_PIN, LOW);
+  digitalWrite(RELAY_PIN, C_OFF);
 }
 
 void setFanClockMode() {

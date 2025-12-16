@@ -25,6 +25,7 @@ Version history
 3.0 Removed over the air updates`
 4.0 Ported to PlatformIO
 5.0 Included clock to switch on and off the fan at specific times
+  Version not working yet, Telegram still contains errors in keyboard execution
 */
 
 #include <SPIFFS.h>

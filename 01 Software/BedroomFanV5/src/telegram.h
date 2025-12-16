@@ -8,31 +8,31 @@ using namespace std;
 
 // ======== DEFINES ==================
 // Main menu
-#define CB_FAN_ON     "cbFanOn"
-#define CB_FAN_OFF    "cbFanOff"
-#define CB_TMR_20MIN  "cb20min"
-#define CB_TMR_1HR    "cb1hr"
-#define CB_TMR_4HRS   "cb4hrs"
-#define CB_SETTINGS   "cbSettings"
-#define CB_FAN_CLOCK   "cbClock"
+#define CB_FAN_ON     "cbFanOn"       // Switch on fan permanently
+#define CB_FAN_OFF    "cbFanOff"      // Switch off fan permanently
+#define CB_TMR_20MIN  "cb20min"       // Set 20 minutes timer
+#define CB_TMR_1HR    "cb1hr"         // Set 1 hour timer
+#define CB_TMR_4HRS   "cb4hrs"        // Set 4 hours timer
+#define CB_SETTINGS   "cbSettings"    // Switch to settings menu
+#define CB_FAN_CLOCK  "cbClock"       // Switch to clock mode
 
 // Settings menu
-#define CB_CLOCK_ON   "cbClockOn"
-#define CB_CLOCK_OFF  "cbClockOff"
-#define CB_EVENTLOG   "cbEventLog"
-#define CB_EVENTCLR   "cbEventClr"
-#define CB_STATUS     "cbStatus"
-#define CB_MAIN       "cbMain"
+#define CB_CLOCK_ON   "cbClockOn"     // Switch to clock ON edit menu
+#define CB_CLOCK_OFF  "cbClockOff"    // Switch to clock OFF edit menu
+#define CB_EVENTLOG   "cbEventLog"    // Download event log
+#define CB_EVENTCLR   "cbEventClr"    // Clear event log
+#define CB_STATUS     "cbStatus"      // Show status
+#define CB_MAIN       "cbMain"        // Back to main menu
 
 // Clock edit menu
-#define CB_CLK_ON_MHR     "cbClkMHr"
-#define CB_CLK_ON_PHR     "cbClkPHr"
-#define CB_CLK_ON_M15     "cbClkM15"
-#define CB_CLK_ON_P15     "cbClkP15"
-#define CB_CLK_OFF_MHR    "cbClkMHr"
-#define CB_CLK_OFF_PHR    "cbClkPHr"
-#define CB_CLK_OFF_M15    "cbClkM15"
-#define CB_CLK_OFF_P15    "cbClkP15"
+#define CB_CLK_ON_MHR     "cbClkMHr"  // Clock ON minus hour
+#define CB_CLK_ON_PHR     "cbClkPHr"  // Clock ON plus hour
+#define CB_CLK_ON_M15     "cbClkM15"  // Clock ON minus 15 minutes
+#define CB_CLK_ON_P15     "cbClkP15"  // Clock ON plus 15 minutes
+#define CB_CLK_OFF_MHR    "cbClkMHr"  // Clock OFF minus hour
+#define CB_CLK_OFF_PHR    "cbClkPHr"  // Clock OFF plus hour
+#define CB_CLK_OFF_M15    "cbClkM15"  // Clock OFF minus 15 minutes
+#define CB_CLK_OFF_P15    "cbClkP15"  // Clock OFF plus 15 minutes
 
 // ======== CONSTANTS ================
 const char EMOTICON_WELCOME[]   = { 0xf0, 0x9f, 0x99, 0x8b, 0xe2, 0x80, 0x8d, 0xe2, 0x99, 0x80, 0xef, 0xb8, 0x8f, 0x00 };
@@ -56,7 +56,6 @@ WiFiClientSecure client;
 AsyncTelegram2 myBot(client);
 InlineKeyboard mainKeyboard, settingsKeyboard, clockKeyboard;
 keyboard_t currentKeyboard = kbMain;
-
 
 std::map<keyboard_t, InlineKeyboard* > KEYBOARDS = {
   { kbMain,     &mainKeyboard     },
