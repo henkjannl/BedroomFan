@@ -4,14 +4,8 @@
     A telegram bot for ESP32 that controls a
     fan to cool down the bedroom on warm summer days
  *******************************************************************/
-const String version = "4.0";
+const String bf_version = "6.0";
 const bool FORMAT_SPIFFS_IF_FAILED = true;
-
-/*
-To do:
-sync clock
-add clock to userinterface
-*/
 
 /*
 Version history
@@ -25,6 +19,16 @@ Version history
 3.0 Removed over the air updates`
 4.0 Ported to PlatformIO
 5.0 Included clock to switch on and off the fan at specific times
+6.0 Ported to CTBot library
+    Limited clock times to 00:00 .. 23:45
+    Prevented clock_on to be after clock_off
+    Split application in header and cpp files
+    Overwriting existing Telegram keyboard + message
+
+To do:
+ - store settings in NVS
+ - do not act on !getLocalTime(&timeinfo)) every loop
+ - also respond to group chats
 */
 
 #include <SPIFFS.h>
@@ -80,7 +84,7 @@ void setup()
   setupFan();
   setupTelegram();
 
-  addToEventLogfile( String("Bedroom fan started. Software version ") + version );
+  addToEventLogfile( String("Bedroom fan started. Software version ") + bf_version );
 
   Serial.println("Init completed");
 }
