@@ -97,7 +97,7 @@ void loopWifi() {
     }
 
     addToEventLogfile(msg);
-    Serial.println(msg);
+    // Serial.println(msg);
 
     wifi.wifiReportedConnected = connected;
   }
@@ -126,14 +126,14 @@ void loopWifi() {
       wifi.multi.run(CONNECT_TIMEOUT_LOOP);
     }
 
-    char msg[96];
-    snprintf(msg, sizeof(msg),
-             "%s WiFi reconnect attempt %u",
-             (WiFi.status() == WL_CONNECTED) ? "Successful" : "Unsuccessful",
-             attempt);
+    // char msg[96];
+    // snprintf(msg, sizeof(msg),
+    //          "%s WiFi reconnect attempt %u",
+    //          (WiFi.status() == WL_CONNECTED) ? "Successful" : "Unsuccessful",
+    //          attempt);
 
-    addToEventLogfile(msg);
-    Serial.println(msg);
+    // addToEventLogfile(msg);
+    // Serial.println(msg);
 
     wifi.reconnectReported = attempt;
   }

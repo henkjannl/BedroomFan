@@ -95,20 +95,14 @@ std::map<keyboard_t, CTBotInlineKeyboard*> KEYBOARDS = {
 static void sendOrEdit(int64_t chatId, const String& text, CTBotInlineKeyboard* kbd = nullptr) {
   int32_t& msgId = lastMessageId[chatId];
 
-  Serial.print("sendOrEdit messageID ");
-  Serial.print(msgId);
-  Serial.print("chatID ");
-  Serial.print(chatId);
-  Serial.print((kbd) ? "kbd " : "no kbd ");
-  Serial.print("text ");
-  Serial.println(text);
+  String msg = text + "\nmsg "+ String(msgId) + " chat " + String(chatId) + " kbd " + ((kbd) ? "yes" : "no");
 
   if (msgId > 0) {
-    if (kbd) myBot.editMessageText(chatId, msgId, text, *kbd);
-    else     myBot.editMessageText(chatId, msgId, text);
+    if (kbd) myBot.editMessageText(chatId, msgId, msg, *kbd);
+    else     myBot.editMessageText(chatId, msgId, msg);
   } else {
-    if (kbd) msgId = myBot.sendMessage(chatId, text, *kbd);
-    else     msgId = myBot.sendMessage(chatId, text);
+    if (kbd) msgId = myBot.sendMessage(chatId, msg, *kbd);
+    else     msgId = myBot.sendMessage(chatId, msg);
   }
 }
 
@@ -119,7 +113,7 @@ static String convertToHexString(String input) {
   }
   result += "0x00 };";
   result.toLowerCase();
-  Serial.println(input + ": " + result);
+  // Serial.println(input + ": " + result);
   return result;
 }
 
@@ -339,7 +333,7 @@ static void handleCallback(const TBMessage &msg) {
     currentKeyboard = kbClock;
   }
   else if (cb == CB_STATUS) {
-    newMessage += String(EMOTICON_VERSION) + String("Software version: ") + bf_version + "\n";
+    newMessage += String(EMOTICON_VERSION) + " Software version: " + bf_version + "\n";
     newMessage += wifiConnectedTo() + "\n";
     currentKeyboard = kbSettings;
   }
@@ -419,7 +413,7 @@ static void handleCallback(const TBMessage &msg) {
     sendOrEdit((uint32_t)msg.sender.id, newMessage, kbd);
   }
 
-  Serial.println(newMessage);
+  // Serial.println(newMessage);
 }
 
 // ======== PUBLIC API =======
