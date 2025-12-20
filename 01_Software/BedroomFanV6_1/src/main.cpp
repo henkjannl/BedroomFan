@@ -12,8 +12,9 @@
 #include "wifi_connect.h"
 #include "telegram.h"
 
-
 /*
+Check version.cpp for version history
+
 MyCredentials.h and MyCredentials.cpp are not included since they are in .gitignore
 This file contains all private user specific data
 The template for this file is:

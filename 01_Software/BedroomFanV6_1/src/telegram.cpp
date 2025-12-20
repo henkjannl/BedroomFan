@@ -24,10 +24,10 @@ using namespace std;
 
 // Settings menu
 #define CB_SET_CLOCK   "cbSetClock"
-#define CB_EVENTLOG   "cbEventLog"
-#define CB_EVENTCLR   "cbEventClr"
-#define CB_STATUS     "cbStatus"
-#define CB_MAIN       "cbMain"
+#define CB_EVENTLOG    "cbEventLog"
+#define CB_EVENTCLR    "cbEventClr"
+#define CB_STATUS      "cbStatus"
+#define CB_MAIN        "cbMain"
 
 // Clock edit menu (clock_on)
 #define CB_CLK_ON_MHR     "cbClkOnMHr"   // Clock ON minus hour
@@ -78,20 +78,6 @@ std::map<keyboard_t, CTBotInlineKeyboard*> KEYBOARDS = {
 };
 
 // ======== HELPERS =================
-static void sendOrEdit(int64_t chatId, const String& text, CTBotInlineKeyboard* kbd = nullptr) {
-  int32_t& msgId = lastMessageId[chatId];
-
-  String msg = text + "\nmsg "+ String(msgId) + " chat " + String(chatId) + " kbd " + ((kbd) ? "yes" : "no");
-
-  if (msgId > 0) {
-    if (kbd) myBot.editMessageText(chatId, msgId, msg, *kbd);
-    else     myBot.editMessageText(chatId, msgId, msg);
-  } else {
-    if (kbd) msgId = myBot.sendMessage(chatId, msg, *kbd);
-    else     msgId = myBot.sendMessage(chatId, msg);
-  }
-}
-
 static String convertToHexString(String input) {
   String result = "{ ";
   for (int i = 0; i < input.length(); i++) {
@@ -103,9 +89,23 @@ static String convertToHexString(String input) {
   return result;
 }
 
-static void sendMessageToKeyUser(String msg) {
-  // keep same behavior: always attach the main keyboard
-  myBot.sendMessage((uint32_t)userid, msg, mainKeyboard);
+static int64_t getChatId(const TBMessage& msg) {
+  if (msg.group.id != 0) {
+    return msg.group.id;     // group or supergroup
+  }
+  return msg.sender.id;     // private chat
+}
+
+static void sendOrEdit(int64_t chatId, const String& text, CTBotInlineKeyboard* kbd = nullptr) {
+  int32_t& msgId = lastMessageId[chatId];
+
+  if (msgId > 0) {
+    if (kbd) myBot.editMessageText(chatId, msgId, text, *kbd);
+    else     myBot.editMessageText(chatId, msgId, text);
+  } else {
+    if (kbd) msgId = myBot.sendMessage(chatId, text, *kbd);
+    else     msgId = myBot.sendMessage(chatId, text);
+  }
 }
 
 static void sendLongMessage(uint32_t chatId, const String &text, CTBotInlineKeyboard *kbd = nullptr) {
@@ -122,6 +122,11 @@ static void sendLongMessage(uint32_t chatId, const String &text, CTBotInlineKeyb
 
     start += chunkLen;
   }
+}
+
+static void sendMessageToKeyUser(String msg) {
+  // keep same behavior: always attach the main keyboard
+  myBot.sendMessage(userid, msg, mainKeyboard);
 }
 
 // ======== KEYBOARD BUILDERS =======
@@ -152,6 +157,10 @@ static void buildMainKeyboard() {
 
   btn = String(EMOTICON_SETTINGS) + " Settings";
   mainKeyboard.addButton(btn, CB_SETTINGS, CTBotKeyboardButtonQuery);
+
+  btn = String(EMOTICON_STATUS) + " Status";
+  mainKeyboard.addButton(btn, CB_STATUS, CTBotKeyboardButtonQuery);
+
   mainKeyboard.addRow();
 }
 
@@ -162,10 +171,6 @@ static void buildSettingsKeyboard() {
 
   btn = String(EMOTICON_CLOCK) + " Set clock time";
   settingsKeyboard.addButton(btn, CB_SET_CLOCK, CTBotKeyboardButtonQuery);
-
-  btn = String(EMOTICON_STATUS) + " Status";
-  settingsKeyboard.addButton(btn, CB_STATUS, CTBotKeyboardButtonQuery);
-
   settingsKeyboard.addRow();
 
   btn = String(EMOTICON_EVENTLOG) + " Download event log";
@@ -246,8 +251,8 @@ static String StatusMessage() {
       result = String(EMOTICON_HOURGLASS) + item;
       break;
     case fsClock:
-      result =  String(EMOTICON_CLOCK) + " Fan is switched on from "  + clock_on.to_String() +
-        String(" to ") + clock_off.to_String() + String(". It is currently ") + (fanIsOn() ? "on." : "off.");
+      result =  String(EMOTICON_CLOCK) + " Fan is switched on between "  + clock_on.to_String() +
+        String(" and ") + clock_off.to_String() + String(". It is currently ") + (fanIsOn() ? "on." : "off.");
       break;
   }
 
@@ -313,15 +318,15 @@ static void handleCallback(const TBMessage &msg) {
     newMessage += String(EMOTICON_SETTINGS) + " Settings menu\n";
     currentKeyboard = kbSettings;
   }
+  else if (cb == CB_STATUS) {
+    newMessage += String(EMOTICON_VERSION) + " Software version: " + bf_version + "\n";
+    newMessage += wifiConnectedTo() + "\n";
+    currentKeyboard = kbMain;
+  }
 
   // SETTINGS actions
   else if (cb == CB_SET_CLOCK) {
     currentKeyboard = kbClock;
-  }
-  else if (cb == CB_STATUS) {
-    newMessage += String(EMOTICON_VERSION) + " Software version: " + bf_version + "\n";
-    newMessage += wifiConnectedTo() + "\n";
-    currentKeyboard = kbSettings;
   }
   else if (cb == CB_EVENTLOG) {
     newMessage += String(EMOTICON_EVENTLOG) + " Event log:\n";
@@ -384,12 +389,10 @@ static void handleCallback(const TBMessage &msg) {
 
   if (cb == CB_EVENTLOG) {
     // event log can be long -> chunk it (first chunk includes keyboard)
-    sendLongMessage((uint32_t)msg.sender.id, newMessage, kbd);
+    sendLongMessage(getChatId(msg), newMessage, kbd);
   } else {
-    sendOrEdit((uint32_t)msg.sender.id, newMessage, kbd);
+    sendOrEdit(getChatId(msg), newMessage, kbd);
   }
-
-  // Serial.println(newMessage);
 }
 
 // ======== PUBLIC API =======
@@ -402,11 +405,12 @@ void setupTelegram() {
   buildAllKeyboards();
   currentKeyboard = kbMain;
 
-  // Send welcome message
+  // Send welcome message to the owner
   TBMessage msg;
-  int64_t chatId = (int64_t)userid;   // private chat assumption
-  String text = String(EMOTICON_WELCOME) + " Welcome!\n" + StatusMessage();
-  lastMessageId[chatId] = myBot.sendMessage(chatId, text, *KEYBOARDS[currentKeyboard]);
+  String text = String(EMOTICON_WELCOME) + " Welcome!\n";
+  text += wifiConnectedTo() + "\n";
+  text += StatusMessage();
+  lastMessageId[userid] = myBot.sendMessage(userid, text, *KEYBOARDS[currentKeyboard]);
 }
 
 void loopTelegram() {
@@ -428,22 +432,22 @@ void loopTelegram() {
       if (tgReply == "/start") {
         String text = String(EMOTICON_WELCOME) + " Welcome!\n" + StatusMessage();
         currentKeyboard = kbMain;
-        myBot.sendMessage((uint32_t)msg.sender.id, text, *KEYBOARDS[currentKeyboard]);
+        myBot.sendMessage(getChatId(msg), text, *KEYBOARDS[currentKeyboard]);
       }
       else if (tgReply == "/status") {
         currentKeyboard = kbMain;
-        myBot.sendMessage((uint32_t)msg.sender.id, StatusMessage(), *KEYBOARDS[currentKeyboard]);
+        myBot.sendMessage(getChatId(msg), StatusMessage(), *KEYBOARDS[currentKeyboard]);
       }
       else if (tgReply.startsWith("/hex ")) {
         String payload = tgReply.substring(5);
         String text = String("const char EMOTICON[] = ") + convertToHexString(payload);
         currentKeyboard = kbMain;
-        myBot.sendMessage((uint32_t)msg.sender.id, text, *KEYBOARDS[currentKeyboard]);
+        myBot.sendMessage(getChatId(msg), text, *KEYBOARDS[currentKeyboard]);
       }
       else {
         // echo + main keyboard
         currentKeyboard = kbMain;
-        myBot.sendMessage((uint32_t)msg.sender.id, String("Unknown command: ") + tgReply, *KEYBOARDS[currentKeyboard]);
+        myBot.sendMessage(getChatId(msg), String("Unknown command: ") + tgReply, *KEYBOARDS[currentKeyboard]);
       }
     }
     else if (msg.messageType == CTBotMessageQuery) {

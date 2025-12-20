@@ -67,6 +67,7 @@ void setFanClockMode() {
 void setupFan() {
   pinMode(RELAY_PIN, OUTPUT);
   setFanModeClock();
+  loopFan(); // check initial state
 }
 
 void loopFan() {

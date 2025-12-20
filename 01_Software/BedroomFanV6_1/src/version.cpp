@@ -20,11 +20,14 @@ Version history
     Split application in header and cpp files
     Overwriting existing Telegram keyboard + message
 6.1 Changed event logging
-6.1 Cleaned up WiFi, to keep clock running even if WiFi is lost
+    Cleaned up WiFi, to keep clock running even if WiFi is lost
+    Increased WiFi power to extend connection
+    Implemented reconnect to other stations if signal is lost
+    Repaired returning messages to group chats
 
 To do:
- - check why group chats are not working
  - store settings in NVS
  - do not act on !getLocalTime(&timeinfo)) every loop
  - maybe backup error log once in a while to SPIFFS
+ - maybe also allow clock to switch over midnight
 */
